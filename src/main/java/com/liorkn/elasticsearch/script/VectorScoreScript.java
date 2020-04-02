@@ -25,7 +25,7 @@ import org.elasticsearch.script.NativeScriptFactory;
 import org.elasticsearch.script.ScriptException;
 
 import java.nio.ByteBuffer;
-import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -40,7 +40,8 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
     // the field containing the vectors to be scored against
     public final String field;
 
-    private static final int DOUBLE_SIZE = 8;
+    //   其实是float
+    private static final int DOUBLE_SIZE = 4;
 
     private int docId;
     private BinaryDocValues binaryEmbeddingReader;
@@ -135,10 +136,11 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
         this.field = field.toString();
 
         // get query inputVector - convert to primitive
-        final ArrayList<Double> tmp = (ArrayList<Double>) params.get("vector");
+        final ArrayList tmp = (ArrayList) params.get("vector");
         this.inputVector = new double[tmp.size()];
         for (int i = 0; i < inputVector.length; i++) {
-            inputVector[i] = tmp.get(i);
+            inputVector[i] = Double.parseDouble(tmp.get(i).toString());
+            System.out.print(inputVector[i]);
         }
 
         if(cosine) {
@@ -174,9 +176,9 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
             return 0.0;
         }
         final int position = input.getPosition();
-        final DoubleBuffer doubleBuffer = ByteBuffer.wrap(bytes, position, len).asDoubleBuffer();
+        final FloatBuffer doubleBuffer = ByteBuffer.wrap(bytes, position, len).asFloatBuffer();
 
-        final double[] docVector = new double[size];
+        final float[] docVector = new float[size];
         doubleBuffer.get(docVector);
 
         double docVectorNorm = 0.0f;
