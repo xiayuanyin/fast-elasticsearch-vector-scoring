@@ -140,7 +140,6 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
         this.inputVector = new double[tmp.size()];
         for (int i = 0; i < inputVector.length; i++) {
             inputVector[i] = Double.parseDouble(tmp.get(i).toString());
-            System.out.print(inputVector[i]);
         }
 
         if(cosine) {
