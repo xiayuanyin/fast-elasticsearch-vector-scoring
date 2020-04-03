@@ -27,6 +27,7 @@ import org.elasticsearch.script.ScriptException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Map;
 
 /**
@@ -46,7 +47,7 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
     private int docId;
     private BinaryDocValues binaryEmbeddingReader;
 
-    private final double[] inputVector;
+    private final float[] inputVector;
     private final double magnitude;
 
     private final boolean cosine;
@@ -117,7 +118,15 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
             return SCRIPT_NAME;
         }
     }
-    
+
+    public static float[] convertBase64ToArray(String base64Str) {
+        final byte[] decode = Base64.getDecoder().decode(base64Str.getBytes());
+        final FloatBuffer floatBuffer = ByteBuffer.wrap(decode).asFloatBuffer();
+        final float[] dims = new float[floatBuffer.capacity()];
+        floatBuffer.get(dims);
+
+        return dims;
+    }
     
     /**
      * Init
@@ -136,17 +145,26 @@ public final class VectorScoreScript implements LeafSearchScript, ExecutableScri
         this.field = field.toString();
 
         // get query inputVector - convert to primitive
-        final ArrayList tmp = (ArrayList) params.get("vector");
-        this.inputVector = new double[tmp.size()];
-        for (int i = 0; i < inputVector.length; i++) {
-            inputVector[i] = Double.parseDouble(tmp.get(i).toString());
+        final Object vector = params.get("vector");
+        if(vector != null) {
+            final ArrayList tmp = (ArrayList) vector;
+            inputVector = new float[tmp.size()];
+            for (int i = 0; i < inputVector.length; i++) {
+                inputVector[i] = Float.parseFloat(tmp.get(i).toString());
+            }
+        } else {
+            final Object encodedVector = params.get("encoded_vector");
+            if(encodedVector == null) {
+                throw new IllegalArgumentException("Must have at 'vector' or 'encoded_vector' as a parameter");
+            }
+            inputVector = convertBase64ToArray((String) encodedVector);
         }
 
         if(cosine) {
             // calc magnitude
             double queryVectorNorm = 0.0;
             // compute query inputVector norm once
-            for (double v : this.inputVector) {
+            for (float v : this.inputVector) {
                 queryVectorNorm += v * v;
             }
             magnitude =  Math.sqrt(queryVectorNorm);
